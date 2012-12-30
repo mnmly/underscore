@@ -14,28 +14,36 @@ $(document).ready(function() {
 
   });
 
-  test("utility: identity", function() {
+  test("#750 - Return _ instance.", 2, function() {
+    var instance = _([]);
+    ok(_(instance) === instance);
+    ok(new _(instance) === instance);
+  });
+
+  test("identity", function() {
     var moe = {name : 'moe'};
     equal(_.identity(moe), moe, 'moe is the same as his identity');
   });
 
-  test("utility: uniqueId", function() {
+  test("uniqueId", function() {
     var ids = [], i = 0;
     while(i++ < 100) ids.push(_.uniqueId());
     equal(_.uniq(ids).length, ids.length, 'can generate a globally-unique stream of ids');
   });
 
-  test("utility: times", function() {
+  test("times", function() {
     var vals = [];
     _.times(3, function (i) { vals.push(i); });
     ok(_.isEqual(vals, [0,1,2]), "is 0 indexed");
     //
     vals = [];
-    _(3).times(function (i) { vals.push(i); });
+    _(3).times(function(i) { vals.push(i); });
     ok(_.isEqual(vals, [0,1,2]), "works as a wrapper");
+    // collects return values
+    ok(_.isEqual([0, 1, 2], _.times(3, function(i) { return i; })), "collects return values");
   });
 
-  test("utility: mixin", function() {
+  test("mixin", function() {
     _.mixin({
       myReverse: function(string) {
         return string.split('').reverse().join('');
@@ -45,12 +53,21 @@ $(document).ready(function() {
     equal(_('champ').myReverse(), 'pmahc', 'mixed in a function to the OOP wrapper');
   });
 
-  test("utility: _.escape", function() {
+  test("_.escape", function() {
     equal(_.escape("Curly & Moe"), "Curly &amp; Moe");
     equal(_.escape("Curly &amp; Moe"), "Curly &amp;amp; Moe");
+    equal(_.escape(null), '');
   });
 
-  test("utility: template", function() {
+  test("_.unescape", function() {
+    var string = "Curly & Moe";
+    equal(_.unescape("Curly &amp; Moe"), string);
+    equal(_.unescape("Curly &amp;amp; Moe"), "Curly &amp; Moe");
+    equal(_.unescape(null), '');
+    equal(_.unescape(_.escape(string)), string);
+  });
+
+  test("template", function() {
     var basicTemplate = _.template("<%= thing %> is gettin' on my noives!");
     var result = basicTemplate({thing : 'This'});
     equal(result, "This is gettin' on my noives!", 'can do basic attribute interpolation');
@@ -156,6 +173,15 @@ $(document).ready(function() {
     equal(templateWithNull({planet : "world"}), "a null undefined world", "can handle missing escape and evaluate settings");
   });
 
+  test('_.template provides the generated function source, when a SyntaxError occurs', function() {
+    try {
+      _.template('<b><%= if x %></b>');
+    } catch (ex) {
+      var source = ex.source;
+    }
+    ok(/__p/.test(source));
+  });
+
   test('_.template handles \\u2028 & \\u2029', function() {
     var tmpl = _.template('<p>\u2028<%= "\\u2028\\u2029" %>\u2029</p>');
     strictEqual(tmpl(), '<p>\u2028\u2028\u2029\u2029</p>');
@@ -210,6 +236,17 @@ $(document).ready(function() {
     var countEscaped = 0;
     var templateEscaped = _.template('<%- f() %>');
     templateEscaped({f: function(){ ok(!(countEscaped++)); }});
+  });
+
+  test('#746 - _.template settings are not modified.', 1, function() {
+    var settings = {};
+    _.template('', null, settings);
+    deepEqual(settings, {});
+  });
+
+  test('#779 - delimeters are applied to unescaped text.', 1, function() {
+    var template = _.template('<<\nx\n>>', null, {evaluate: /<<(.*?)>>/g});
+    strictEqual(template(), '<<\nx\n>>');
   });
 
 });
